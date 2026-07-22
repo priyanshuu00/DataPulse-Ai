@@ -1,0 +1,124 @@
+version: '3.8'
+
+services:
+  # PostgreSQL for metadata and backend usage
+  postgres:
+    image: postgres:15-alpine
+    container_name: datapulse-postgres
+    environment:
+      POSTGRES_USER: datapulse
+      POSTGRES_PASSWORD: datapulse_password
+      POSTGRES_DB: datapulse_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - datapulse-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U datapulse -d datapulse_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # pgAdmin for Database management
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: datapulse-pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@datapulse.ai
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "5050:80"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - datapulse-network
+
+  # Redis for Caching
+  redis:
+    image: redis:7-alpine
+    container_name: datapulse-redis
+    ports:
+      - "6379:6379"
+    networks:
+      - datapulse-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Kafka Broker (KRaft mode)
+  kafka:
+    image: confluentinc/cp-kafka:7.4.0
+    container_name: datapulse-kafka
+    ports:
+      - "9092:9092"
+      - "9093:9093"
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: 'CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT'
+      KAFKA_ADVERTISED_LISTENERS: 'PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092'
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_JMX_PORT: 9101
+      KAFKA_JMX_HOSTNAME: localhost
+      KAFKA_PROCESS_ROLES: 'broker,controller'
+      KAFKA_CONTROLLER_QUORUM_VOTERS: '1@kafka:29093'
+      KAFKA_LISTENERS: 'PLAINTEXT://kafka:29092,CONTROLLER://kafka:29093,PLAINTEXT_HOST://0.0.0.0:9092'
+      KAFKA_INTER_BROKER_LISTENER_NAME: 'PLAINTEXT'
+      KAFKA_CONTROLLER_LISTENER_NAMES: 'CONTROLLER'
+      KAFKA_LOG_DIRS: '/tmp/kraft-combined-logs'
+      CLUSTER_ID: 'MkU3OEVBNTcwNTJENDM2Qk'
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+    networks:
+      - datapulse-network
+
+  # Kafka UI for observability
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: datapulse-kafka-ui
+    ports:
+      - "8080:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
+    depends_on:
+      - kafka
+    networks:
+      - datapulse-network
+
+  # MinIO (S3 compatible storage for Data Lake)
+  minio:
+    image: minio/minio:latest
+    container_name: datapulse-minio
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    command: server /data --console-address ":9001"
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    networks:
+      - datapulse-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+
+volumes:
+  postgres_data:
+  kafka_data:
+  minio_data:
+
+networks:
+  datapulse-network:
+    driver: bridge

@@ -1,0 +1,60 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: data-pulse-api
+  datasource:
+    url: jdbc:postgresql://localhost:5432/datapulse_db
+    username: datapulse_user
+    password: datapulse_password
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+  kafka:
+    bootstrap-servers: localhost:9092
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      acks: all
+      retries: 2147483647
+      properties:
+        enable.idempotence: true
+
+storage:
+  minio:
+    endpoint: http://localhost:9001
+    access-key: minioadmin
+    secret-key: minioadmin
+    bucket: datapulse-raw
+
+datapulse:
+  kafka:
+    topics:
+      dataset-events: datapulse.datasets.events
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always
+  info:
+    env:
+      enabled: true
+
+info:
+  app:
+    name: DataPulse AI
+    description: Enterprise Data Intelligence Platform API
+    version: 1.0.0

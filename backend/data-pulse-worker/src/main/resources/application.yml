@@ -1,0 +1,41 @@
+server:
+  port: 8081 # Run on a different port than API
+
+spring:
+  application:
+    name: data-pulse-worker
+  datasource:
+    url: jdbc:postgresql://localhost:5432/datapulse_db
+    username: datapulse_user
+    password: datapulse_password
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+  flyway:
+    enabled: true
+  kafka:
+    bootstrap-servers: localhost:9092
+    consumer:
+      group-id: datapulse-spark-worker-group
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+
+datapulse:
+  kafka:
+    topics:
+      dataset-events: datapulse.datasets.events
+
+storage:
+  minio:
+    endpoint: http://localhost:9001
+    access-key: minioadmin
+    secret-key: minioadmin
+    bucket: datapulse-raw
+
+spark:
+  master: local[*]
+  app:
+    name: DataPulse Spark Worker

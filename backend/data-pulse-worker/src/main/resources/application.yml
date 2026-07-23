@@ -1,12 +1,12 @@
 server:
-  port: 8081 # Run on a different port than API
+  port: 8082 # Run on a different port than API
 
 spring:
   application:
     name: data-pulse-worker
   datasource:
     url: jdbc:postgresql://localhost:5432/datapulse_db
-    username: datapulse_user
+    username: datapulse
     password: datapulse_password
     driver-class-name: org.postgresql.Driver
   jpa:
@@ -30,7 +30,7 @@ datapulse:
 
 storage:
   minio:
-    endpoint: http://localhost:9001
+    endpoint: http://localhost:9000
     access-key: minioadmin
     secret-key: minioadmin
     bucket: datapulse-raw

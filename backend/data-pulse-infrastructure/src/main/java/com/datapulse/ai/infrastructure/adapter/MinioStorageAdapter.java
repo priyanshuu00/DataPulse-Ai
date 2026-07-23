@@ -5,6 +5,8 @@ import com.datapulse.ai.core.domain.StorageProvider;
 import com.datapulse.ai.core.ports.ObjectStoragePort;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.CreateBucketRequest;
+import software.amazon.awssdk.services.s3.model.HeadBucketRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectResponse;
 
@@ -24,6 +26,12 @@ public class MinioStorageAdapter implements ObjectStoragePort {
     @Override
     public StorageObject uploadFile(String bucket, String objectKey, InputStream stream, String contentType, long size) {
         try {
+            try {
+                s3Client.headBucket(HeadBucketRequest.builder().bucket(bucket).build());
+            } catch (Exception ex) {
+                s3Client.createBucket(CreateBucketRequest.builder().bucket(bucket).build());
+            }
+
             // In a real production system we'd calculate SHA-256 while streaming to avoid loading to memory
             // For phase 5, we assume the InputStream is already processed or we wrap it in a DigestInputStream.
             // Placeholder checksum for compilation

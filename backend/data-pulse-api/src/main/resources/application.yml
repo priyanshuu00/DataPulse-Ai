@@ -1,42 +1,47 @@
 server:
-  port: 8080
+  port: 8081
 
 spring:
   application:
     name: data-pulse-api
   datasource:
-    url: jdbc:postgresql://localhost:5432/datapulse_db
-    username: datapulse_user
-    password: datapulse_password
-    driver-class-name: org.postgresql.Driver
+    url: ${SPRING_DATASOURCE_URL:jdbc:h2:mem:datapulse_db;DB_CLOSE_DELAY=-1;MODE=PostgreSQL}
+    username: ${SPRING_DATASOURCE_USERNAME:sa}
+    password: ${SPRING_DATASOURCE_PASSWORD:}
+    driver-class-name: ${SPRING_DATASOURCE_DRIVER_CLASS_NAME:org.h2.Driver}
+  h2:
+    console:
+      enabled: true
   jpa:
     hibernate:
-      ddl-auto: validate
+      ddl-auto: update
     show-sql: false
     properties:
       hibernate:
         format_sql: true
   flyway:
-    enabled: true
-    baseline-on-migrate: true
+    enabled: false
   kafka:
-    bootstrap-servers: localhost:9092
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
-      acks: all
-      retries: 2147483647
+      acks: 1
+      retries: 3
       properties:
-        enable.idempotence: true
+        enable.idempotence: false
 
 storage:
   minio:
-    endpoint: http://localhost:9001
+    endpoint: ${MINIO_ENDPOINT:http://localhost:9000}
     access-key: minioadmin
     secret-key: minioadmin
     bucket: datapulse-raw
 
 datapulse:
+  ai:
+    gemini:
+      api-key: ${GEMINI_API_KEY:}
   kafka:
     topics:
       dataset-events: datapulse.datasets.events

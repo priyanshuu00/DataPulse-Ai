@@ -18,12 +18,15 @@ public class GlobalExceptionHandler {
         return buildError(HttpStatus.BAD_REQUEST, ex.getMessage(), request.getDescription(false));
     }
     
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(GlobalExceptionHandler.class);
+
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<ApiErrorResponse> handleRuntime(RuntimeException ex, WebRequest request) {
-        if (ex.getMessage().contains("not found")) {
+        log.error("Runtime exception during request handling", ex);
+        if (ex.getMessage() != null && ex.getMessage().contains("not found")) {
             return buildError(HttpStatus.NOT_FOUND, ex.getMessage(), request.getDescription(false));
         }
-        return buildError(HttpStatus.INTERNAL_SERVER_ERROR, "An unexpected error occurred", request.getDescription(false));
+        return buildError(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage() != null ? ex.getMessage() : "An unexpected error occurred", request.getDescription(false));
     }
 
     private ResponseEntity<ApiErrorResponse> buildError(HttpStatus status, String error, String path) {

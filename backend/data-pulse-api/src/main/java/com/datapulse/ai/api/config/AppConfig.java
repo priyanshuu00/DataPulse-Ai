@@ -1,7 +1,6 @@
 package com.datapulse.ai.api.config;
 
 import com.datapulse.ai.core.ports.DatasetRepository;
-import com.datapulse.ai.core.ports.DatasetRepository;
 import com.datapulse.ai.core.ports.ObjectStoragePort;
 import com.datapulse.ai.core.services.DatasetIngestionService;
 import com.datapulse.ai.core.services.VersionManagementService;
@@ -31,12 +30,6 @@ public class AppConfig {
     }
 
     @Bean
-    public com.datapulse.ai.core.ports.DatasetEventPublisher datasetEventPublisher(org.springframework.kafka.core.KafkaTemplate<String, Object> kafkaTemplate,
-                                                       @Value("${datapulse.kafka.topics.dataset-events}") String topic) {
-        return new com.datapulse.ai.infrastructure.event.KafkaDatasetEventPublisher(kafkaTemplate, topic);
-    }
-
-    @Bean
     public VersionManagementService versionManagementService() {
         return new VersionManagementService();
     }
@@ -63,8 +56,9 @@ public class AppConfig {
     @Bean
     public com.datapulse.ai.core.ports.AiServicePort aiServicePort(
             com.datapulse.ai.infrastructure.ai.PromptFactory promptFactory,
-            com.fasterxml.jackson.databind.ObjectMapper objectMapper) {
-        return new com.datapulse.ai.infrastructure.ai.MockAiAdapter(promptFactory, objectMapper);
+            com.fasterxml.jackson.databind.ObjectMapper objectMapper,
+            @Value("${datapulse.ai.gemini.api-key:}") String geminiApiKey) {
+        return new com.datapulse.ai.infrastructure.ai.GeminiAiAdapter(promptFactory, objectMapper, geminiApiKey);
     }
 
     @Bean

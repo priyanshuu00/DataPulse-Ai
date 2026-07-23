@@ -12,6 +12,7 @@ import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
@@ -19,6 +20,7 @@ import java.util.List;
 import java.util.UUID;
 
 @Component
+@ConditionalOnBean(SparkSession.class)
 public class SparkDataProcessorAdapter implements DataProcessorPort {
 
     private static final Logger log = LoggerFactory.getLogger(SparkDataProcessorAdapter.class);

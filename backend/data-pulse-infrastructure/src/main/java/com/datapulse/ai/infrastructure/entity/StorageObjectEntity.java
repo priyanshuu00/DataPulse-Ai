@@ -1,8 +1,6 @@
 package com.datapulse.ai.infrastructure.entity;
 
 import jakarta.persistence.Embeddable;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
 
 @Embeddable
 public class StorageObjectEntity {
@@ -14,8 +12,6 @@ public class StorageObjectEntity {
     private Long size;
     private String contentType;
     private String checksum;
-    
-    @Enumerated(EnumType.STRING)
     private String provider;
 
     public StorageObjectEntity() {}

@@ -30,11 +30,6 @@ public class WorkerAppConfig {
     }
 
     @Bean
-    public DataProcessorPort dataProcessorPort(SparkSession sparkSession) {
-        return new SparkDataProcessorAdapter(sparkSession);
-    }
-
-    @Bean
     public SparkOrchestrationService sparkOrchestrationService(DataProcessorPort dataProcessorPort, 
                                                                DatasetRepository datasetRepository,
                                                                com.datapulse.ai.core.ports.DatasetSchemaRepositoryPort schemaRepository) {

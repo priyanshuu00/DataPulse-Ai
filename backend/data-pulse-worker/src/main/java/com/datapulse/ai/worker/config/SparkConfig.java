@@ -33,7 +33,8 @@ public class SparkConfig {
                 .config("spark.hadoop.fs.s3a.secret.key", minioSecretKey)
                 .config("spark.hadoop.fs.s3a.path.style.access", "true")
                 .config("spark.hadoop.fs.s3a.impl", "org.apache.hadoop.fs.s3a.S3AFileSystem")
-                // Optimization for MinIO
+                // Optimization for MinIO & Spring Boot 3 compatibility
+                .config("spark.ui.enabled", "false")
                 .config("spark.hadoop.fs.s3a.connection.ssl.enabled", "false")
                 .getOrCreate();
     }

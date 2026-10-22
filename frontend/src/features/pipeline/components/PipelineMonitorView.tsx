@@ -1,32 +1,26 @@
 'use client';
 
+import { useQuery } from '@tanstack/react-query';
 import { Cpu, Layers, Server, RefreshCw } from 'lucide-react';
 import { StatusBadge } from '../../../components/common/StatusBadge';
-
-const mockJobs = [
-  {
-    id: 'JOB-9021',
-    datasetName: 'Customer Transactions Q3',
-    version: '1.0.0',
-    stage: 'PROCESSING',
-    kafkaStatus: 'HEALTHY',
-    sparkStatus: 'RUNNING',
-    duration: '45s',
-    topic: 'datapulse.datasets.events',
-  },
-  {
-    id: 'JOB-9020',
-    datasetName: 'Telemetry Sensor Data',
-    version: '2.1.0',
-    stage: 'READY',
-    kafkaStatus: 'IDLE',
-    sparkStatus: 'COMPLETED',
-    duration: '1m 12s',
-    topic: 'datapulse.datasets.events',
-  },
-];
+import { pipelineService } from '../../../services/pipeline.service';
+import { TableSkeleton } from '../../../components/ui/Skeletons';
 
 export function PipelineMonitorView() {
+  const { data: jobs, isLoading, refetch, isFetching } = useQuery({
+    queryKey: ['pipeline-jobs'],
+    queryFn: pipelineService.getJobs,
+    refetchInterval: 4000,
+  });
+
+  const { data: clusterHealth } = useQuery({
+    queryKey: ['pipeline-cluster'],
+    queryFn: pipelineService.getClusterHealth,
+    refetchInterval: 5000,
+  });
+
+  const activeJobsList = jobs || [];
+
   return (
     <div className="space-y-6 font-mono">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-4">
@@ -39,8 +33,12 @@ export function PipelineMonitorView() {
           </p>
         </div>
 
-        <button className="inline-flex items-center gap-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-300 text-xs font-semibold px-3 py-1.5 rounded border">
-          <RefreshCw className="h-3.5 w-3.5" /> Refresh Telemetry
+        <button 
+          onClick={() => refetch()}
+          disabled={isFetching}
+          className="inline-flex items-center gap-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-300 text-xs font-semibold px-3 py-1.5 rounded border transition-colors disabled:opacity-50"
+        >
+          <RefreshCw className={`h-3.5 w-3.5 ${isFetching ? 'animate-spin' : ''}`} /> Refresh Telemetry
         </button>
       </div>
 
@@ -51,12 +49,14 @@ export function PipelineMonitorView() {
             <span className="flex items-center gap-1.5">
               <Server className="h-4 w-4 text-blue-500" /> KAFKA EVENT BROKER
             </span>
-            <span className="text-emerald-500 text-[10px] font-bold">HEALTHY</span>
+            <span className="text-emerald-500 text-[10px] font-bold">
+              {clusterHealth?.kafkaStatus || 'HEALTHY'}
+            </span>
           </div>
           <div className="text-lg font-bold text-slate-900 dark:text-slate-100">
             datapulse.datasets.events
           </div>
-          <div className="text-[11px] text-slate-400">Partition: 0 | Replication Factor: 1</div>
+          <div className="text-[11px] text-slate-400">Partition: 0 | Event Stream Broker</div>
         </div>
 
         <div className="p-4 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 space-y-2">
@@ -64,12 +64,14 @@ export function PipelineMonitorView() {
             <span className="flex items-center gap-1.5">
               <Cpu className="h-4 w-4 text-amber-500" /> SPARK ENGINE WORKER
             </span>
-            <span className="text-emerald-500 text-[10px] font-bold">ACTIVE</span>
+            <span className={`text-[10px] font-bold ${clusterHealth?.sparkStatus?.includes('ACTIVE') ? 'text-amber-500' : 'text-emerald-500'}`}>
+              {clusterHealth?.sparkStatus || 'STANDBY'}
+            </span>
           </div>
           <div className="text-lg font-bold text-slate-900 dark:text-slate-100">
             SparkWorkerApp
           </div>
-          <div className="text-[11px] text-slate-400">Cores: 4 | Memory: 8GB Allocated</div>
+          <div className="text-[11px] text-slate-400">Distributed Ingestion & Schema Extraction</div>
         </div>
 
         <div className="p-4 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 space-y-2">
@@ -77,12 +79,14 @@ export function PipelineMonitorView() {
             <span className="flex items-center gap-1.5">
               <Layers className="h-4 w-4 text-purple-500" /> MINIO OBJECT STORAGE
             </span>
-            <span className="text-emerald-500 text-[10px] font-bold">ONLINE</span>
+            <span className="text-emerald-500 text-[10px] font-bold">
+              {clusterHealth?.storageStatus || 'ONLINE'}
+            </span>
           </div>
           <div className="text-lg font-bold text-slate-900 dark:text-slate-100">
-            datapulse-raw
+            {clusterHealth?.storageBucket || 'datapulse-raw'}
           </div>
-          <div className="text-[11px] text-slate-400">Endpoint: http://localhost:9000</div>
+          <div className="text-[11px] text-slate-400">Endpoint: {clusterHealth?.storageEndpoint || 'http://localhost:9000'}</div>
         </div>
       </div>
 
@@ -90,39 +94,53 @@ export function PipelineMonitorView() {
       <div className="rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 overflow-hidden">
         <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
           <h3 className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase">
-            Active Job Execution Registry
+            Active Job Execution Registry ({activeJobsList.length})
           </h3>
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead className="bg-slate-50 dark:bg-slate-900 text-slate-500 uppercase border-b">
-              <tr>
-                <th className="p-3">Job ID</th>
-                <th className="p-3">Target Dataset</th>
-                <th className="p-3">Version</th>
-                <th className="p-3">Current Stage</th>
-                <th className="p-3">Kafka Status</th>
-                <th className="p-3">Spark Execution</th>
-                <th className="p-3">Duration</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
-              {mockJobs.map((job) => (
-                <tr key={job.id} className="hover:bg-slate-50 dark:hover:bg-slate-900/50">
-                  <td className="p-3 font-bold text-blue-600">{job.id}</td>
-                  <td className="p-3 font-semibold text-slate-900 dark:text-slate-100">{job.datasetName}</td>
-                  <td className="p-3 text-slate-500">{job.version}</td>
-                  <td className="p-3">
-                    <StatusBadge status={job.stage} />
-                  </td>
-                  <td className="p-3 text-emerald-600 font-bold">{job.kafkaStatus}</td>
-                  <td className="p-3 text-amber-600 font-bold">{job.sparkStatus}</td>
-                  <td className="p-3 text-slate-500">{job.duration}</td>
+          {isLoading ? (
+            <div className="p-4">
+              <TableSkeleton rows={4} />
+            </div>
+          ) : activeJobsList.length === 0 ? (
+            <div className="p-8 text-center text-slate-500 text-xs">
+              No pipeline execution records in registry. Ingest a dataset version to initiate processing telemetry.
+            </div>
+          ) : (
+            <table className="w-full text-left text-xs">
+              <thead className="bg-slate-50 dark:bg-slate-900 text-slate-500 uppercase border-b">
+                <tr>
+                  <th className="p-3">Job ID</th>
+                  <th className="p-3">Target Dataset</th>
+                  <th className="p-3">Version</th>
+                  <th className="p-3">Current Stage</th>
+                  <th className="p-3">Kafka Status</th>
+                  <th className="p-3">Spark Execution</th>
+                  <th className="p-3">Duration</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
+                {activeJobsList.map((job) => (
+                  <tr key={job.id} className="hover:bg-slate-50 dark:hover:bg-slate-900/50">
+                    <td className="p-3 font-bold text-blue-600">{job.id}</td>
+                    <td className="p-3 font-semibold text-slate-900 dark:text-slate-100">{job.datasetName}</td>
+                    <td className="p-3 text-slate-500">{job.version}</td>
+                    <td className="p-3">
+                      <StatusBadge status={job.stage as any} />
+                    </td>
+                    <td className={`p-3 font-bold ${job.kafkaStatus === 'ERROR' ? 'text-rose-600' : 'text-emerald-600'}`}>
+                      {job.kafkaStatus}
+                    </td>
+                    <td className={`p-3 font-bold ${job.sparkStatus === 'RUNNING' ? 'text-amber-600' : (job.sparkStatus === 'FAILED' ? 'text-rose-600' : 'text-emerald-600')}`}>
+                      {job.sparkStatus}
+                    </td>
+                    <td className="p-3 text-slate-500">{job.duration}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
       </div>
     </div>

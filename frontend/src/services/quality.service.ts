@@ -1,27 +1,28 @@
 import { apiClient } from '../lib/api/client';
 
-export interface QualitySummary {
-  overallScore: number;
-  validRowsPercentage: number;
-  completenessScore: number;
-  schemaComplianceScore: number;
-  totalErrorsFound: number;
+export interface PlatformQualitySummary {
+  totalRules: number;
+  activeRules: number;
+  averageCompliance: number;
+  schemaViolations: number;
+  rulesSummary: string;
+}
+
+export interface DatasetQualityReport {
+  compliance: number;
+  totalRules: number;
+  violations: number;
+  rules?: unknown[];
 }
 
 export const qualityService = {
-  getQualitySummary: async (datasetId: string): Promise<QualitySummary> => {
-    try {
-      const { data } = await apiClient.get<QualitySummary>(`/datasets/${datasetId}/quality`);
-      return data;
-    } catch {
-      // Fallback default enterprise metric
-      return {
-        overallScore: 98.4,
-        validRowsPercentage: 99.1,
-        completenessScore: 97.8,
-        schemaComplianceScore: 100.0,
-        totalErrorsFound: 14,
-      };
-    }
+  getPlatformQualitySummary: async (): Promise<PlatformQualitySummary> => {
+    const { data } = await apiClient.get<PlatformQualitySummary>('/quality/summary');
+    return data;
+  },
+
+  getDatasetQuality: async (datasetId: string): Promise<DatasetQualityReport> => {
+    const { data } = await apiClient.get<DatasetQualityReport>(`/datasets/${datasetId}/quality`);
+    return data;
   },
 };

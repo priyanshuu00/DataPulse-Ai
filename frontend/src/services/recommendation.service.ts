@@ -8,4 +8,9 @@ export const recommendationService = {
     );
     return data;
   },
+
+  getAllRecommendations: async (): Promise<RuleRecommendationResponse[]> => {
+    const { data } = await apiClient.get<RuleRecommendationResponse[]>('/recommendations');
+    return data;
+  },
 };

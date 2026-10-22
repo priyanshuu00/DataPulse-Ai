@@ -69,6 +69,20 @@ export const datasetService = {
     return data;
   },
 
+  getPreview: async (
+    id: string,
+    versionId?: string
+  ): Promise<{ columns: string[]; rows: Record<string, unknown>[] }> => {
+    const url = versionId
+      ? `/datasets/${id}/versions/${versionId}/preview`
+      : `/datasets/${id}/preview`;
+    const { data } = await apiClient.get<{
+      columns: string[];
+      rows: Record<string, unknown>[];
+    }>(url);
+    return data;
+  },
+
   deleteDataset: async (id: string): Promise<void> => {
     await apiClient.delete(`/datasets/${id}`);
   },

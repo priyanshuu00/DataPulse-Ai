@@ -3,6 +3,7 @@ package com.datapulse.ai.infrastructure.repository;
 import com.datapulse.ai.infrastructure.entity.DatasetVersionEntity;
 import com.datapulse.ai.core.domain.VersionStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -17,4 +18,7 @@ public interface SpringDataDatasetVersionRepository
     List<DatasetVersionEntity> findByStatus(VersionStatus status);
 
     long countByStatus(VersionStatus status);
+
+    @Query("SELECT COALESCE(SUM(v.storageObject.size), 0) FROM DatasetVersionEntity v WHERE v.deletedAt IS NULL")
+    long getTotalStorageBytes();
 }

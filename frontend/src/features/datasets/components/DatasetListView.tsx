@@ -21,7 +21,8 @@ export function DatasetListView({ onOpenUpload }: { onOpenUpload: () => void }) 
 
   const filteredDatasets = (datasets || []).filter((ds) => {
     const matchesSearch = ds.name.toLowerCase().includes(search.toLowerCase()) || ds.id.toLowerCase().includes(search.toLowerCase());
-    return matchesSearch;
+    const matchesStatus = statusFilter === 'ALL' || (ds.status || 'READY') === statusFilter;
+    return matchesSearch && matchesStatus;
   });
 
   return (
@@ -140,7 +141,7 @@ export function DatasetListView({ onOpenUpload }: { onOpenUpload: () => void }) 
                     <td className="p-3 text-slate-500">{formatDate(ds.createdAt)}</td>
                     <td className="p-3 text-slate-500">{formatDate(ds.updatedAt)}</td>
                     <td className="p-3">
-                      <StatusBadge status="READY" />
+                      <StatusBadge status={ds.status || 'READY'} />
                     </td>
                     <td className="p-3 text-right">
                       <Link

@@ -114,4 +114,17 @@ public class PostgresDatasetRepository implements DatasetRepository {
     public long countVersionsByStatus(VersionStatus status) {
         return versionRepository.countByStatus(status);
     }
+
+    @Override
+    public List<DatasetVersion> findAllVersions() {
+        return versionRepository.findAll()
+                .stream()
+                .map(mapper::toDomain)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public long getTotalStorageBytes() {
+        return versionRepository.getTotalStorageBytes();
+    }
 }

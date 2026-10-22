@@ -53,9 +53,21 @@ public class DatasetController {
 
     @GetMapping
     public ResponseEntity<List<DatasetResponse>> listDatasets() {
+        java.util.Map<UUID, com.datapulse.ai.core.domain.DatasetVersion> latestVersions = datasetRepository.findAllVersions().stream()
+                .collect(Collectors.toMap(
+                        com.datapulse.ai.core.domain.DatasetVersion::datasetId,
+                        v -> v,
+                        (v1, v2) -> (v1.createdAt() != null && v2.createdAt() != null && v1.createdAt().isAfter(v2.createdAt())) ? v1 : v2
+                ));
+
         List<DatasetResponse> responses = datasetRepository.findAll().stream()
-            .map(this::mapToResponse)
-            .collect(Collectors.toList());
+                .map(ds -> {
+                    String status = latestVersions.containsKey(ds.id()) && latestVersions.get(ds.id()).status() != null
+                            ? latestVersions.get(ds.id()).status().name()
+                            : "READY";
+                    return mapToResponse(ds, status);
+                })
+                .collect(Collectors.toList());
         return ResponseEntity.ok(responses);
     }
 
@@ -63,7 +75,11 @@ public class DatasetController {
     public ResponseEntity<DatasetResponse> getDataset(@PathVariable("id") UUID id) {
         Dataset dataset = datasetRepository.findById(id)
             .orElseThrow(() -> new RuntimeException("Dataset not found: " + id));
-        return ResponseEntity.ok(mapToResponse(dataset));
+        List<com.datapulse.ai.core.domain.DatasetVersion> versions = datasetRepository.findVersionsByDatasetId(id);
+        String status = (!versions.isEmpty() && versions.get(versions.size() - 1).status() != null)
+                ? versions.get(versions.size() - 1).status().name()
+                : "READY";
+        return ResponseEntity.ok(mapToResponse(dataset, status));
     }
 
     @PatchMapping("/{id}")
@@ -164,18 +180,69 @@ public class DatasetController {
         return ResponseEntity.ok(java.util.Map.of());
     }
 
+    @GetMapping({"/{id}/versions/{versionId}/preview", "/{id}/preview"})
+    public ResponseEntity<java.util.Map<String, Object>> getDatasetPreview(
+            @PathVariable("id") UUID id,
+            @PathVariable(value = "versionId", required = false) UUID versionId) {
+        UUID targetVersionId = versionId;
+        if (targetVersionId == null) {
+            List<com.datapulse.ai.core.domain.DatasetVersion> versions = datasetRepository.findVersionsByDatasetId(id);
+            if (!versions.isEmpty()) {
+                targetVersionId = versions.get(versions.size() - 1).id();
+            }
+        }
+
+        if (targetVersionId == null) {
+            return ResponseEntity.ok(java.util.Map.of("columns", List.of(), "rows", List.of()));
+        }
+
+        java.util.Optional<com.datapulse.ai.core.domain.DatasetSchema> schemaOpt = schemaRepositoryPort.findByVersionId(targetVersionId);
+        if (schemaOpt.isEmpty() || schemaOpt.get().columns() == null || schemaOpt.get().columns().isEmpty()) {
+            return ResponseEntity.ok(java.util.Map.of("columns", List.of(), "rows", List.of()));
+        }
+
+        List<String> columnNames = schemaOpt.get().columns().stream()
+                .map(com.datapulse.ai.core.domain.ColumnMetadata::name)
+                .toList();
+
+        return ResponseEntity.ok(java.util.Map.of(
+                "columns", columnNames,
+                "rows", List.of()
+        ));
+    }
+
     @GetMapping("/{id}/quality")
     public ResponseEntity<Object> getDatasetQuality(@PathVariable("id") UUID id) {
-        return ResponseEntity.ok(java.util.Map.of());
+        List<com.datapulse.ai.core.domain.DatasetVersion> versions = datasetRepository.findVersionsByDatasetId(id);
+        if (versions.isEmpty()) {
+            return ResponseEntity.ok(java.util.Map.of("compliance", 100.0, "totalRules", 0, "violations", 0));
+        }
+        UUID latestVerId = versions.get(versions.size() - 1).id();
+        try {
+            List<com.datapulse.ai.core.domain.RuleRecommendation> recs = recommendationService.generateRecommendations(latestVerId);
+            return ResponseEntity.ok(java.util.Map.of(
+                    "compliance", 100.0,
+                    "totalRules", recs.size(),
+                    "violations", 0,
+                    "rules", recs
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.ok(java.util.Map.of("compliance", 100.0, "totalRules", 0, "violations", 0));
+        }
     }
 
     private DatasetResponse mapToResponse(Dataset dataset) {
+        return mapToResponse(dataset, "READY");
+    }
+
+    private DatasetResponse mapToResponse(Dataset dataset, String status) {
         return new DatasetResponse(
             dataset.id(),
             dataset.workspaceId(),
             dataset.dataSourceId(),
             dataset.name(),
             dataset.description(),
+            status != null ? status : "READY",
             dataset.createdAt(),
             dataset.updatedAt()
         );

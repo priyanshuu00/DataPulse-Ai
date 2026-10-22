@@ -2,9 +2,16 @@
 
 import { Settings, Server, Moon, Sun } from 'lucide-react';
 import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { systemService } from '../../../services/system.service';
 
 export function SettingsView() {
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
+
+  const { data: systemInfo } = useQuery({
+    queryKey: ['system-info'],
+    queryFn: systemService.getSystemInfo,
+  });
 
   const toggleTheme = () => {
     const next = theme === 'dark' ? 'light' : 'dark';
@@ -52,19 +59,33 @@ export function SettingsView() {
           <div className="space-y-2 text-xs">
             <div className="flex justify-between border-b pb-2">
               <span className="text-slate-500">API Base URL:</span>
-              <span className="font-bold text-blue-600">http://localhost:8081/api/v1</span>
+              <span className="font-bold text-blue-600">
+                {systemInfo?.apiBaseUrl || 'http://localhost:8081/api/v1'}
+              </span>
             </div>
             <div className="flex justify-between border-b pb-2">
               <span className="text-slate-500">MinIO Storage:</span>
-              <span className="text-slate-900 dark:text-slate-100">http://localhost:9000</span>
+              <span className="text-slate-900 dark:text-slate-100">
+                {systemInfo?.storageEndpoint || 'http://localhost:9000'}
+              </span>
+            </div>
+            <div className="flex justify-between border-b pb-2">
+              <span className="text-slate-500">MinIO Bucket:</span>
+              <span className="text-slate-900 dark:text-slate-100">
+                {systemInfo?.storageBucket || 'datapulse-raw'}
+              </span>
             </div>
             <div className="flex justify-between border-b pb-2">
               <span className="text-slate-500">Kafka Bootstrap:</span>
-              <span className="text-slate-900 dark:text-slate-100">localhost:9092</span>
+              <span className="text-slate-900 dark:text-slate-100">
+                {systemInfo?.kafkaBootstrap || 'localhost:9092'}
+              </span>
             </div>
             <div className="flex justify-between">
               <span className="text-slate-500">App Version:</span>
-              <span className="text-slate-900 dark:text-slate-100">v1.0.0-RELEASE</span>
+              <span className="text-slate-900 dark:text-slate-100">
+                {systemInfo?.appVersion || 'v1.0.0-RELEASE'}
+              </span>
             </div>
           </div>
         </div>

@@ -13,6 +13,7 @@ export interface Dataset {
   workspaceId?: string;
   dataSourceId?: string;
   createdBy?: string;
+  status?: VersionStatus;
   createdAt: string;
   updatedAt: string;
 }

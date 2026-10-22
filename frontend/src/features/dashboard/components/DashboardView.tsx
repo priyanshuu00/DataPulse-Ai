@@ -4,37 +4,29 @@ import { useQuery } from '@tanstack/react-query';
 import { Database, AlertTriangle, HardDrive, ArrowUpRight, Sparkles, Activity } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { datasetService } from '../../../services/dataset.service';
+import { dashboardService } from '../../../services/dashboard.service';
 import { StatusBadge } from '../../../components/common/StatusBadge';
 import { CardSkeleton } from '../../../components/ui/Skeletons';
 import Link from 'next/link';
 import { formatDate } from '../../../lib/utils';
 
-const chartData = [
-  { time: '00:00', ingest: 12, quality: 98 },
-  { time: '04:00', ingest: 18, quality: 96 },
-  { time: '08:00', ingest: 45, quality: 99 },
-  { time: '12:00', ingest: 32, quality: 97 },
-  { time: '16:00', ingest: 64, quality: 99 },
-  { time: '20:00', ingest: 28, quality: 98 },
-];
-
 export function DashboardView({ onOpenUpload }: { onOpenUpload: () => void }) {
-  const { data: datasets, isLoading } = useQuery({
+  const { data: datasets, isLoading: isDatasetsLoading } = useQuery({
     queryKey: ['datasets'],
     queryFn: datasetService.getDatasets,
   });
 
-  const { data: activeJobsData } = useQuery({
-    queryKey: ['active-jobs'],
-    queryFn: datasetService.getActiveJobs,
+  const { data: summary, isLoading: isSummaryLoading } = useQuery({
+    queryKey: ['dashboard-summary'],
+    queryFn: dashboardService.getSummary,
     refetchInterval: 5000,
   });
 
-  const activeJobs = activeJobsData?.activeJobs ?? 0;
+  const isLoading = isDatasetsLoading || isSummaryLoading;
 
-  const totalDatasets = datasets?.length || 0;
+  const totalDatasets = summary?.totalDatasets ?? datasets?.length ?? 0;
   const recentDatasets = datasets?.slice(0, 5) || [];
-
+  const chartData = summary?.ingestionTraffic || [];
 
   return (
     <div className="space-y-6">
@@ -78,7 +70,8 @@ export function DashboardView({ onOpenUpload }: { onOpenUpload: () => void }) {
                 {totalDatasets}
               </div>
               <div className="text-[11px] text-emerald-600 font-mono flex items-center gap-1">
-                <ArrowUpRight className="h-3 w-3" /> +12% this week
+                <ArrowUpRight className="h-3 w-3" />
+                {summary?.weeklyGrowthText || 'Updated live'}
               </div>
             </div>
 
@@ -88,9 +81,11 @@ export function DashboardView({ onOpenUpload }: { onOpenUpload: () => void }) {
                 <Activity className="h-4 w-4 text-emerald-500" />
               </div>
               <div className="text-2xl font-bold text-slate-900 dark:text-slate-100 font-mono">
-                {activeJobs} Active
+                {summary?.processingJobs ?? 0} Active
               </div>
-              <div className="text-[11px] text-slate-500 font-mono">Spark-01 Cluster Active</div>
+              <div className="text-[11px] text-slate-500 font-mono">
+                Spark Cluster: {summary?.clusterHealth?.sparkStatus ?? 'IDLE'}
+              </div>
             </div>
 
             <div className="p-4 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 space-y-2">
@@ -98,8 +93,12 @@ export function DashboardView({ onOpenUpload }: { onOpenUpload: () => void }) {
                 <span>FAILED JOBS</span>
                 <AlertTriangle className="h-4 w-4 text-rose-500" />
               </div>
-              <div className="text-2xl font-bold text-rose-600 font-mono">0</div>
-              <div className="text-[11px] text-emerald-600 font-mono">100% Pipeline Reliability</div>
+              <div className="text-2xl font-bold text-rose-600 font-mono">
+                {summary?.failedJobs ?? 0}
+              </div>
+              <div className="text-[11px] text-emerald-600 font-mono">
+                {summary?.reliabilityText || '100% Pipeline Reliability'}
+              </div>
             </div>
 
             <div className="p-4 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 space-y-2">
@@ -108,9 +107,11 @@ export function DashboardView({ onOpenUpload }: { onOpenUpload: () => void }) {
                 <HardDrive className="h-4 w-4 text-purple-500" />
               </div>
               <div className="text-2xl font-bold text-slate-900 dark:text-slate-100 font-mono">
-                14.2 GB
+                {summary?.storageHumanReadable || '0 B'}
               </div>
-              <div className="text-[11px] text-slate-500 font-mono">MinIO Bucket: datapulse-raw</div>
+              <div className="text-[11px] text-slate-500 font-mono">
+                MinIO Bucket: {summary?.storageBucket || 'datapulse-raw'}
+              </div>
             </div>
           </>
         )}
@@ -123,7 +124,7 @@ export function DashboardView({ onOpenUpload }: { onOpenUpload: () => void }) {
             <h3 className="text-xs font-mono font-bold text-slate-700 dark:text-slate-300 uppercase">
               Ingestion Traffic & Rate (24h)
             </h3>
-            <span className="text-[11px] font-mono text-slate-400">Events / sec</span>
+            <span className="text-[11px] font-mono text-slate-400">Events / Ingestions</span>
           </div>
           <div className="h-64 w-full">
             <ResponsiveContainer width="100%" height="100%">
@@ -135,7 +136,7 @@ export function DashboardView({ onOpenUpload }: { onOpenUpload: () => void }) {
                   </linearGradient>
                 </defs>
                 <XAxis dataKey="time" stroke="#94a3b8" fontSize={11} tickLine={false} />
-                <YAxis stroke="#94a3b8" fontSize={11} tickLine={false} />
+                <YAxis stroke="#94a3b8" fontSize={11} tickLine={false} allowDecimals={false} />
                 <Tooltip contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', color: '#f8fafc', fontSize: '12px' }} />
                 <Area type="monotone" dataKey="ingest" stroke="#2563eb" strokeWidth={2} fillOpacity={1} fill="url(#colorIngest)" />
               </AreaChart>
@@ -150,25 +151,31 @@ export function DashboardView({ onOpenUpload }: { onOpenUpload: () => void }) {
             </h3>
           </div>
           <div className="space-y-3 font-mono text-xs">
-            <div className="p-3 rounded border border-purple-500/20 bg-purple-500/5 space-y-1">
-              <div className="font-semibold text-purple-600 dark:text-purple-400 flex items-center justify-between">
-                <span>Anomaly Detected</span>
-                <span className="text-[10px] bg-purple-500/10 px-1.5 py-0.5 rounded">99.4% confidence</span>
+            {summary?.insights && summary.insights.length > 0 ? (
+              summary.insights.map((insight) => (
+                <div key={insight.id} className="p-3 rounded border border-purple-500/20 bg-purple-500/5 space-y-1">
+                  <div className="font-semibold text-purple-600 dark:text-purple-400 flex items-center justify-between">
+                    <span>{insight.title}</span>
+                    <span className="text-[10px] bg-purple-500/10 px-1.5 py-0.5 rounded">
+                      {(insight.confidenceScore * 100).toFixed(0)}% confidence
+                    </span>
+                  </div>
+                  <p className="text-slate-600 dark:text-slate-300 text-[11px]">
+                    {insight.description}
+                  </p>
+                </div>
+              ))
+            ) : (
+              <div className="p-6 rounded border border-dashed border-slate-200 dark:border-slate-800 text-center space-y-2">
+                <Sparkles className="h-5 w-5 text-purple-400 mx-auto" />
+                <div className="font-semibold text-slate-600 dark:text-slate-400">
+                  No Insights Available Yet
+                </div>
+                <p className="text-[11px] text-slate-400">
+                  Ingest a dataset with schema to generate automated rule recommendations.
+                </p>
               </div>
-              <p className="text-slate-600 dark:text-slate-300 text-[11px]">
-                High variance in `transaction_amount` column. Recommended constraint: `NotNull & Range(0, 10000)`.
-              </p>
-            </div>
-
-            <div className="p-3 rounded border border-blue-500/20 bg-blue-500/5 space-y-1">
-              <div className="font-semibold text-blue-600 dark:text-blue-400 flex items-center justify-between">
-                <span>Schema Match</span>
-                <span className="text-[10px] bg-blue-500/10 px-1.5 py-0.5 rounded">Deterministic</span>
-              </div>
-              <p className="text-slate-600 dark:text-slate-300 text-[11px]">
-                100% schema compliance verified against PostgreSQL schema registry.
-              </p>
-            </div>
+            )}
           </div>
         </div>
       </div>
@@ -209,7 +216,7 @@ export function DashboardView({ onOpenUpload }: { onOpenUpload: () => void }) {
                     <td className="p-2.5 text-slate-500 font-mono text-[11px]">{ds.id}</td>
                     <td className="p-2.5 text-slate-500">{formatDate(ds.createdAt)}</td>
                     <td className="p-2.5">
-                      <StatusBadge status="READY" />
+                      <StatusBadge status={ds.status || 'READY'} />
                     </td>
                     <td className="p-2.5 text-right">
                       <Link

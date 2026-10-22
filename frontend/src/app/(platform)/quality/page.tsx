@@ -1,8 +1,17 @@
 'use client';
 
+import { useQuery } from '@tanstack/react-query';
 import { FileCheck } from 'lucide-react';
+import { qualityService } from '../../../services/quality.service';
+import { CardSkeleton } from '../../../components/ui/Skeletons';
 
 export default function QualityPage() {
+  const { data: quality, isLoading } = useQuery({
+    queryKey: ['platform-quality-summary'],
+    queryFn: qualityService.getPlatformQualitySummary,
+    refetchInterval: 5000,
+  });
+
   return (
     <div className="space-y-6 font-mono">
       <div className="border-b border-slate-200 dark:border-slate-800 pb-4">
@@ -15,23 +24,43 @@ export default function QualityPage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="p-4 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 space-y-2">
-          <div className="text-xs text-slate-500 uppercase">Total Active Rules</div>
-          <div className="text-2xl font-bold text-slate-900 dark:text-slate-100">42 Rules</div>
-          <div className="text-[11px] text-emerald-600">All rules active</div>
-        </div>
+        {isLoading ? (
+          <>
+            <CardSkeleton />
+            <CardSkeleton />
+            <CardSkeleton />
+          </>
+        ) : (
+          <>
+            <div className="p-4 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 space-y-2">
+              <div className="text-xs text-slate-500 uppercase">Total Active Rules</div>
+              <div className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+                {quality?.totalRules ?? 0} Rules
+              </div>
+              <div className="text-[11px] text-emerald-600">
+                {quality?.rulesSummary || 'Evaluated against cataloged schemas'}
+              </div>
+            </div>
 
-        <div className="p-4 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 space-y-2">
-          <div className="text-xs text-slate-500 uppercase">Average Compliance</div>
-          <div className="text-2xl font-bold text-emerald-600">99.4%</div>
-          <div className="text-[11px] text-slate-400">Target: &gt; 98%</div>
-        </div>
+            <div className="p-4 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 space-y-2">
+              <div className="text-xs text-slate-500 uppercase">Average Compliance</div>
+              <div className="text-2xl font-bold text-emerald-600">
+                {quality ? `${quality.averageCompliance}%` : '100%'}
+              </div>
+              <div className="text-[11px] text-slate-400">Target threshold: &gt; 98%</div>
+            </div>
 
-        <div className="p-4 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 space-y-2">
-          <div className="text-xs text-slate-500 uppercase">Schema Violations</div>
-          <div className="text-2xl font-bold text-slate-900 dark:text-slate-100">0 Violations</div>
-          <div className="text-[11px] text-emerald-600">Zero critical failures</div>
-        </div>
+            <div className="p-4 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 space-y-2">
+              <div className="text-xs text-slate-500 uppercase">Schema Violations</div>
+              <div className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+                {quality?.schemaViolations ?? 0} Violations
+              </div>
+              <div className="text-[11px] text-emerald-600">
+                {quality?.schemaViolations === 0 ? 'Zero critical failures recorded' : 'Action required'}
+              </div>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

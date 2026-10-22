@@ -94,4 +94,17 @@ public class InMemoryDatasetRepository implements DatasetRepository {
     public List<Dataset> findAll() {
         return new ArrayList<>(datasets.values());
     }
+
+    @Override
+    public List<DatasetVersion> findAllVersions() {
+        return new ArrayList<>(versions.values());
+    }
+
+    @Override
+    public long getTotalStorageBytes() {
+        return versions.values().stream()
+                .filter(v -> v.storageObject() != null)
+                .mapToLong(v -> v.storageObject().size())
+                .sum();
+    }
 }

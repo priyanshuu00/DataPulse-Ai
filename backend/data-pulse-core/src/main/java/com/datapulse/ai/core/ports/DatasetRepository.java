@@ -18,6 +18,8 @@ public interface DatasetRepository {
     List<DatasetVersion> findVersionsByDatasetId(UUID datasetId);
 
     long countVersionsByStatus(VersionStatus status);
+    List<DatasetVersion> findAllVersions();
+    long getTotalStorageBytes();
 
     List<Dataset> findAll();
     void deleteById(UUID id);

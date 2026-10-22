@@ -1,33 +1,18 @@
 'use client';
 
+import { useQuery } from '@tanstack/react-query';
 import { Sparkles } from 'lucide-react';
 import { RecommendationInspector } from '../../../features/recommendations/components/RecommendationInspector';
-import { RuleRecommendationResponse } from '../../../types/recommendation';
-
-const mockRecommendations: RuleRecommendationResponse[] = [
-  {
-    id: 'REC-101',
-    columnName: 'customer_email',
-    ruleType: 'EMAIL_FORMAT',
-    parameters: { regex: '^[a-[a-z0-9._%+-]+@[a-z0-9.-]+\\.[a-z]{2,}$' },
-    explanation: 'Detected 99.8% compliance with standard RFC 5322 email patterns.',
-    confidenceScore: 0.99,
-    source: 'RULE_ENGINE',
-    generatedAt: new Date().toISOString(),
-  },
-  {
-    id: 'REC-102',
-    columnName: 'transaction_amount',
-    ruleType: 'NON_NEGATIVE_NUMERIC',
-    parameters: { min: '0' },
-    explanation: 'AI Model identified negative numerical values in 0.02% of transaction rows.',
-    confidenceScore: 0.95,
-    source: 'AI',
-    generatedAt: new Date().toISOString(),
-  },
-];
+import { recommendationService } from '../../../services/recommendation.service';
+import { CardSkeleton } from '../../../components/ui/Skeletons';
 
 export default function RecommendationsPage() {
+  const { data: recommendations, isLoading } = useQuery({
+    queryKey: ['platform-recommendations'],
+    queryFn: recommendationService.getAllRecommendations,
+    refetchInterval: 5000,
+  });
+
   return (
     <div className="space-y-6">
       <div className="border-b border-slate-200 dark:border-slate-800 pb-4">
@@ -39,7 +24,11 @@ export default function RecommendationsPage() {
         </p>
       </div>
 
-      <RecommendationInspector recommendations={mockRecommendations} />
+      {isLoading ? (
+        <CardSkeleton />
+      ) : (
+        <RecommendationInspector recommendations={recommendations || []} />
+      )}
     </div>
   );
 }

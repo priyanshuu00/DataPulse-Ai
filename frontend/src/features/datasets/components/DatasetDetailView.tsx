@@ -162,12 +162,12 @@ export function DatasetDetailView({ datasetId }: { datasetId: string }) {
 
                 <span className="text-slate-400">MinIO Storage URI:</span>
                 <span className="truncate text-slate-900 dark:text-slate-100 font-mono text-[11px]">
-                  {latestVersion.uri || 's3://datapulse-raw/data.csv'}
+                  {latestVersion.uri || (latestVersion.objectKey ? `s3://datapulse-raw/${latestVersion.objectKey}` : 'Pending storage assignment')}
                 </span>
 
                 <span className="text-slate-400">File Size:</span>
                 <span className="text-slate-900 dark:text-slate-100">
-                  {latestVersion.size ? formatBytes(latestVersion.size) : '1.24 MB'}
+                  {latestVersion.size != null ? formatBytes(latestVersion.size) : '0 B'}
                 </span>
               </div>
             ) : (
@@ -185,33 +185,46 @@ export function DatasetDetailView({ datasetId }: { datasetId: string }) {
 
       {activeTab === 'preview' && (
         <div className="p-5 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 space-y-4">
-          <h3 className="text-xs font-mono font-bold text-slate-700 dark:text-slate-300 uppercase">
-            Data Sample Preview (Top Rows)
-          </h3>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs font-mono border">
-              <thead className="bg-slate-50 dark:bg-slate-900 border-b">
-                <tr>
-                  <th className="p-2 border">#</th>
-                  <th className="p-2 border">id</th>
-                  <th className="p-2 border">column_a</th>
-                  <th className="p-2 border">column_b</th>
-                  <th className="p-2 border">status</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y">
-                {Array.from({ length: 5 }).map((_, idx) => (
-                  <tr key={idx} className="hover:bg-slate-50 dark:hover:bg-slate-900">
-                    <td className="p-2 border font-bold text-slate-400">{idx + 1}</td>
-                    <td className="p-2 border">REC-{1000 + idx}</td>
-                    <td className="p-2 border">Sample Text {idx + 1}</td>
-                    <td className="p-2 border">{((idx + 1) * 142.5).toFixed(2)}</td>
-                    <td className="p-2 border text-emerald-600 font-bold">VALID</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="flex items-center justify-between">
+            <h3 className="text-xs font-mono font-bold text-slate-700 dark:text-slate-300 uppercase">
+              Data Sample Preview
+            </h3>
+            {schema?.columns && (
+              <span className="text-[11px] font-mono text-slate-400">
+                {schema.columns.length} Inferred Columns
+              </span>
+            )}
           </div>
+          {schema?.columns && schema.columns.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs font-mono border">
+                <thead className="bg-slate-50 dark:bg-slate-900 border-b">
+                  <tr>
+                    <th className="p-2 border">#</th>
+                    {schema.columns.slice(0, 8).map((col) => (
+                      <th key={col.name} className="p-2 border">
+                        {col.name}
+                        <span className="block text-[9px] text-slate-400 font-normal">
+                          {col.dataType}
+                        </span>
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  <tr className="hover:bg-slate-50 dark:hover:bg-slate-900">
+                    <td colSpan={schema.columns.slice(0, 8).length + 1} className="p-4 text-center text-slate-500 font-sans text-xs">
+                      Schema validated with {schema.columns.length} columns. Raw row preview stream ready upon Spark cluster execution.
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="p-8 text-center border border-dashed rounded-lg font-mono text-xs text-slate-400">
+              No schema or preview data available yet for this dataset version.
+            </div>
+          )}
         </div>
       )}
 

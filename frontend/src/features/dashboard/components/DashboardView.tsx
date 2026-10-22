@@ -24,8 +24,17 @@ export function DashboardView({ onOpenUpload }: { onOpenUpload: () => void }) {
     queryFn: datasetService.getDatasets,
   });
 
+  const { data: activeJobsData } = useQuery({
+    queryKey: ['active-jobs'],
+    queryFn: datasetService.getActiveJobs,
+    refetchInterval: 5000,
+  });
+
+  const activeJobs = activeJobsData?.activeJobs ?? 0;
+
   const totalDatasets = datasets?.length || 0;
   const recentDatasets = datasets?.slice(0, 5) || [];
+
 
   return (
     <div className="space-y-6">
@@ -79,7 +88,7 @@ export function DashboardView({ onOpenUpload }: { onOpenUpload: () => void }) {
                 <Activity className="h-4 w-4 text-emerald-500" />
               </div>
               <div className="text-2xl font-bold text-slate-900 dark:text-slate-100 font-mono">
-                3 Active
+                {activeJobs} Active
               </div>
               <div className="text-[11px] text-slate-500 font-mono">Spark-01 Cluster Active</div>
             </div>

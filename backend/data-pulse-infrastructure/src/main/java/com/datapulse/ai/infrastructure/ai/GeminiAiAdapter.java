@@ -5,6 +5,7 @@ import com.datapulse.ai.core.domain.DatasetSchema;
 import com.datapulse.ai.core.domain.RecommendationSource;
 import com.datapulse.ai.core.domain.RuleRecommendation;
 import com.datapulse.ai.core.ports.AiServicePort;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -18,6 +19,7 @@ import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -58,13 +60,13 @@ public class GeminiAiAdapter implements AiServicePort {
                     )
             ));
 
-            String url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=" + apiKey;
+            String url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=" + apiKey;
 
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create(url))
                     .header("Content-Type", "application/json")
                     .POST(HttpRequest.BodyPublishers.ofString(jsonPayload))
-                    .timeout(Duration.ofSeconds(15))
+                    .timeout(Duration.ofSeconds(60))
                     .build();
 
             HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
@@ -83,9 +85,29 @@ public class GeminiAiAdapter implements AiServicePort {
                 List<RuleRecommendation> recommendations = new ArrayList<>();
 
                 for (GeminiRuleDto r : rules) {
+                    // LLMs sometimes return structured parameter values (arrays, objects,
+                    // numbers) — e.g. allowedValues: ["active","inactive"]. The domain
+                    // contract is Map<String,String>, so serialize non-string values as JSON.
+                    Map<String, String> parameters = new LinkedHashMap<>();
+                    if (r.parameters() != null) {
+                        r.parameters().forEach((key, value) -> {
+                            if (value == null) {
+                                parameters.put(key, null);
+                            } else if (value instanceof String text) {
+                                parameters.put(key, text);
+                            } else {
+                                try {
+                                    parameters.put(key, objectMapper.writeValueAsString(value));
+                                } catch (JsonProcessingException e) {
+                                    parameters.put(key, String.valueOf(value));
+                                }
+                            }
+                        });
+                    }
+
                     recommendations.add(new RuleRecommendation(
                             UUID.randomUUID(),
-                            new DataQualityRule(r.columnName(), r.ruleType(), r.parameters()),
+                            new DataQualityRule(r.columnName(), r.ruleType(), parameters),
                             r.explanation(),
                             r.confidenceScore(),
                             RecommendationSource.AI,
@@ -108,7 +130,7 @@ public class GeminiAiAdapter implements AiServicePort {
     private record GeminiRuleDto(
             String columnName,
             String ruleType,
-            Map<String, String> parameters,
+            Map<String, Object> parameters,
             String explanation,
             double confidenceScore
     ) {}

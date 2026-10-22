@@ -51,6 +51,22 @@
             <version>4.0.1</version>
         </dependency>
 
+        <!--
+          ANTLR version alignment: Spark 3.5's SQL parser (spark-sql-api) is generated
+          with ANTLR 4.9.x and fails at runtime with 4.13
+          ("Could not deserialize ATN with version 3 (expected 4)").
+          Hibernate ORM 6.5 pulls antlr4-runtime 4.13 onto the shared classpath and wins
+          Maven's default mediation. Declaring 4.9.3 directly here pins Spark's version for
+          the worker only; the API module (no Spark) keeps Hibernate's 4.13 for HQL parsing.
+          The worker's processing path is CRUD-only (findById/save), so Hibernate's HQL
+          parser is never invoked here.
+        -->
+        <dependency>
+            <groupId>org.antlr</groupId>
+            <artifactId>antlr4-runtime</artifactId>
+            <version>4.9.3</version>
+        </dependency>
+
         <!-- Testing -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

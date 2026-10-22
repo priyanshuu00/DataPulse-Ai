@@ -1,5 +1,6 @@
 package com.datapulse.ai.api.controller;
 
+import com.datapulse.ai.core.domain.VersionStatus;
 import com.datapulse.ai.core.domain.Dataset;
 import com.datapulse.ai.core.ports.DatasetRepository;
 import com.datapulse.ai.shared.dto.DatasetCreateRequest;
@@ -216,4 +217,21 @@ public class DatasetController {
 
         return ResponseEntity.ok(response);
     }
+    @GetMapping("/active-jobs")
+    public ResponseEntity<java.util.Map<String, Long>> getActiveJobs() {
+        long uploading =
+            datasetRepository.countVersionsByStatus(VersionStatus.UPLOADING);
+
+        long validating =
+            datasetRepository.countVersionsByStatus(VersionStatus.VALIDATING);
+
+        long processing =
+            datasetRepository.countVersionsByStatus(VersionStatus.PROCESSING);
+
+        long activeJobs = uploading + validating + processing;
+
+    return ResponseEntity.ok(
+            java.util.Map.of("activeJobs", activeJobs)
+    );
+}
 }

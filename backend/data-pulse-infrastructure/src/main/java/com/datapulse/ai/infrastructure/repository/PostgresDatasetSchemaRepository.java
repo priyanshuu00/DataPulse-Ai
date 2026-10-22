@@ -35,6 +35,8 @@ public class PostgresDatasetSchemaRepository implements DatasetSchemaRepositoryP
                 colEntity.setDescription(col.description());
                 colEntity.setNullCount(col.nullCount());
                 colEntity.setSampleValues(col.sampleValues());
+                // Back-reference so the child carries the schema_id FK on insert.
+                colEntity.setSchema(entity);
                 return colEntity;
             }).collect(Collectors.toList()));
         }

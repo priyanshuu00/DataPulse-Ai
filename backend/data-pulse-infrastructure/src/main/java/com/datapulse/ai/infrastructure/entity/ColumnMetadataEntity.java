@@ -11,8 +11,12 @@ public class ColumnMetadataEntity {
     @Column(name = "id", updatable = false, nullable = false)
     private UUID id;
 
-    @Column(name = "schema_id", nullable = false, insertable = false, updatable = false)
-    private UUID schemaId;
+    // The association owns the schema_id foreign key. A plain read-only @Column here
+    // (with @JoinColumn on the parent side) made Hibernate insert children before the
+    // parent row existed, violating the NOT NULL constraint on schema_id.
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "schema_id", nullable = false)
+    private DatasetSchemaEntity schema;
 
     @Column(name = "name", nullable = false)
     private String name;
@@ -36,8 +40,9 @@ public class ColumnMetadataEntity {
 
     public UUID getId() { return id; }
     public void setId(UUID id) { this.id = id; }
-    public UUID getSchemaId() { return schemaId; }
-    public void setSchemaId(UUID schemaId) { this.schemaId = schemaId; }
+    public DatasetSchemaEntity getSchema() { return schema; }
+    public void setSchema(DatasetSchemaEntity schema) { this.schema = schema; }
+    public UUID getSchemaId() { return schema != null ? schema.getId() : null; }
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
     public String getDataType() { return dataType; }

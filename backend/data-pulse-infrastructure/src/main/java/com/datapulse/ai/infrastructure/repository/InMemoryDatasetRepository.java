@@ -2,6 +2,7 @@ package com.datapulse.ai.infrastructure.repository;
 
 import com.datapulse.ai.core.domain.Dataset;
 import com.datapulse.ai.core.domain.DatasetVersion;
+import com.datapulse.ai.core.domain.VersionStatus;
 import com.datapulse.ai.core.ports.DatasetRepository;
 
 import java.util.ArrayList;
@@ -77,10 +78,19 @@ public class InMemoryDatasetRepository implements DatasetRepository {
             .collect(Collectors.toList());
     }
     
+    @Override
+    public long countVersionsByStatus(VersionStatus status) {
+        return versions.values().stream()
+            .filter(v -> status.equals(v.status()))
+            .count();
+    }
+
+    @Override
     public void deleteById(UUID id) {
         datasets.remove(id);
     }
     
+    @Override
     public List<Dataset> findAll() {
         return new ArrayList<>(datasets.values());
     }

@@ -188,15 +188,30 @@ npm run dev
 cd docker
 docker compose up -d
 
-# Start Backend API
+# Start Backend API (point it at PostgreSQL — required so the API and the
+# worker share one database; otherwise the API silently uses in-memory H2
+# and the worker can't see uploaded versions)
 cd ../backend
 $env:GEMINI_API_KEY="YOUR_GEMINI_API_KEY"
+$env:SPRING_DATASOURCE_URL="jdbc:postgresql://localhost:5432/datapulse_db"
+$env:SPRING_DATASOURCE_USERNAME="datapulse"
+$env:SPRING_DATASOURCE_PASSWORD="datapulse_password"
+$env:SPRING_DATASOURCE_DRIVER_CLASS_NAME="org.postgresql.Driver"
 .\mvnw.cmd spring-boot:run -pl data-pulse-api
 
+# Start the Kafka/Spark Worker in a second terminal (consumes upload events,
+# runs schema inference and marks versions READY)
+cd backend
+.\mvnw.cmd spring-boot:run -pl data-pulse-worker
+
 # Start Frontend
-cd ../frontend
+cd frontend
 npm run dev
 ```
+
+> **Note:** In full-stack mode the worker must be running, or uploaded versions
+> stay in `UPLOADED`/`PROCESSING` forever. In standalone mode (no Docker) the
+> API falls back to H2, but file uploads fail because MinIO is unavailable.
 
 ---
 

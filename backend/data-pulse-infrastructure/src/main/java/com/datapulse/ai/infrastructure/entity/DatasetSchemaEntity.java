@@ -18,8 +18,9 @@ public class DatasetSchemaEntity {
     @Column(name = "version_id", nullable = false)
     private UUID versionId;
 
-    @OneToMany(cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    @JoinColumn(name = "schema_id")
+    // mappedBy: ColumnMetadataEntity.schema owns the FK. A unidirectional @JoinColumn
+    // here caused children to be inserted before the parent, breaking schema_id NOT NULL.
+    @OneToMany(mappedBy = "schema", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<ColumnMetadataEntity> columns;
 
     public DatasetSchemaEntity() {}
